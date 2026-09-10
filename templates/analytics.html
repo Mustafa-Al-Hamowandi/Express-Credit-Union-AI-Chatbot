@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Express Credit Union AI Training</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="{{ url_for('static', filename='CompanyPic.PNG') }}" alt="Express Credit Union Logo" class="company-logo">
+            </div>
+            <nav>
+                <a href="/">Chat</a>
+                <a href="/analytics" class="active">Analytics</a>
+                <a href="/vin-decoder">VIN Decoder</a>
+            </nav>
+        </header>
+
+        <main class="analytics-main">
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <h3>Total Conversations</h3>
+                    <p class="stat-number" id="totalConversations">Loading...</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Most Popular Topic</h3>
+                    <p class="stat-text" id="popularTopic">Loading...</p>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <h2>Most Frequently Asked Questions</h2>
+                <div id="questionChart"></div>
+            </div>
+
+            <div class="recent-section">
+                <h2>Recent Conversations</h2>
+                <div id="recentConversations">
+                    <p>Loading...</p>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Express Credit Union - Seattle, WA | Serving all community members</p>
+        </footer>
+    </div>
+
+    <script>
+        // Load analytics data when page loads
+        window.addEventListener('load', loadAnalytics);
+
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/analytics');
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Error loading analytics:', data.error);
+                    return;
+                }
+                
+                // Update statistics
+                document.getElementById('totalConversations').textContent = data.total_conversations;
+                
+                if (data.category_counts.length > 0) {
+                    document.getElementById('popularTopic').textContent = data.category_counts[0].category;
+                } else {
+                    document.getElementById('popularTopic').textContent = 'No data yet';
+                }
+                
+                // Create bar chart
+                createBarChart(data.category_counts);
+                
+                // Display recent conversations
+                displayRecentConversations(data.recent_conversations);
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        function createBarChart(categoryData) {
+            if (categoryData.length === 0) {
+                document.getElementById('questionChart').innerHTML = 
+                    '<p class="no-data">No conversation data available yet. Start using the chat to see analytics!</p>';
+                return;
+            }
+            
+            const categories = categoryData.map(item => item.category);
+            const counts = categoryData.map(item => item.count);
+            
+            // Define colorful gradient colors for each bar
+            const colors = [
+                '#28a745',  // Green
+                '#2196F3',  // Blue
+                '#ff9800',  // Orange
+                '#9c27b0',  // Purple
+                '#e91e63',  // Pink
+                '#009688',  // Teal
+                '#f44336',  // Red
+                '#00bcd4'   // Cyan
+            ];
+            
+            // Assign colors to bars based on their index
+            const barColors = categories.map((_, index) => colors[index % colors.length]);
+            
+            const data = [{
+                x: categories,
+                y: counts,
+                type: 'bar',
+                marker: {
+                    color: barColors,
+                    line: {
+                        color: '#333',
+                        width: 1.5
+                    },
+                    opacity: 0.8
+                },
+                text: counts.map(String),
+                textposition: 'auto',
+                hoverinfo: 'none'
+            }];
+            
+            const layout = {
+                xaxis: {
+                    title: {
+                        text: 'Question Category',
+                        font: {
+                            size: 14,
+                            color: '#333',
+                            family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                        }
+                    },
+                    tickangle: -45,
+                    automargin: true,
+                    tickfont: {
+                        size: 12,
+                        color: '#333'
+                    }
+                },
+                yaxis: {
+                    title: {
+                        text: 'Number of Questions',
+                        font: {
+                            size: 14,
+                            color: '#333',
+                            family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                        }
+                    },
+                    dtick: 5,
+                    tickfont: {
+                        size: 12,
+                        color: '#333'
+                    },
+                    automargin: true
+                },
+                margin: {
+                    l: 100,
+                    r: 50,
+                    t: 40,
+                    b: 120
+                },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white',
+                hovermode: 'closest',
+                font: {
+                    family: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                },
+                autosize: true,
+                height: 450
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+            
+            Plotly.newPlot('questionChart', data, layout, config);
+        }
+
+        function displayRecentConversations(conversations) {
+            const container = document.getElementById('recentConversations');
+            
+            if (conversations.length === 0) {
+                container.innerHTML = '<p class="no-data">No conversations yet. Start chatting to see recent activity!</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            const table = document.createElement('table');
+            table.className = 'conversations-table';
+            
+            // Create header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th>Time</th>
+                    <th>Question</th>
+                    <th>Category</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // Create body
+            const tbody = document.createElement('tbody');
+            conversations.forEach(conv => {
+                const row = document.createElement('tr');
+                row.className = 'clickable-row';
+                row.style.cursor = 'pointer';
+                
+                const timeCell = document.createElement('td');
+                timeCell.textContent = formatTimestamp(conv.timestamp);
+                
+                const questionCell = document.createElement('td');
+                questionCell.className = 'question-cell clickable-question';
+                questionCell.textContent = conv.message;
+                
+                const categoryCell = document.createElement('td');
+                categoryCell.innerHTML = `<span class="category-badge">${conv.category}</span>`;
+                
+                // Make row clickable - store conversation data and redirect to chat
+                row.addEventListener('click', function() {
+                    // Store the conversation in sessionStorage
+                    sessionStorage.setItem('viewConversation', JSON.stringify({
+                        question: conv.message,
+                        response: conv.response,
+                        timestamp: conv.timestamp
+                    }));
+                    
+                    // Redirect to chat page
+                    window.location.href = '/';
+                });
+                
+                row.appendChild(timeCell);
+                row.appendChild(questionCell);
+                row.appendChild(categoryCell);
+                tbody.appendChild(row);
+            });
+            
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString();
+        }
+    </script>
+</body>
+</html>

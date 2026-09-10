@@ -1,0 +1,16 @@
+# Environments
+.venv/
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Databases (contain login data / scraped data, even if fake)
+*.db
+express_cu.db
+secure_users*
+
+# Editor
+.vs/
+.vscode/

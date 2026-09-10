@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIN Decoder - Express Credit Union AI Training</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="{{ url_for('static', filename='CompanyPic.PNG') }}" alt="Express Credit Union Logo" class="company-logo">
+            </div>
+            <nav>
+                <a href="/">Chat</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/vin-decoder" class="active">VIN Decoder</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="vin-decoder-section">
+                <h2>🚗 Vehicle Identification Number (VIN) Decoder</h2>
+                <p class="helper-text">Enter a 17-character VIN to get vehicle information</p>
+
+                <div class="vin-input-section">
+                    <input 
+                        type="text" 
+                        id="vinInput" 
+                        placeholder="Enter VIN (e.g., 1HGBH41JXMN109186)" 
+                        maxlength="17"
+                        class="vin-input"
+                    >
+                    <button id="decodeBtn" onclick="decodeVIN()">Decode VIN</button>
+                </div>
+
+                <div id="vinResult" class="vin-result"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Express Credit Union - Seattle, WA | Serving all community members</p>
+        </footer>
+    </div>
+
+    <script>
+        // Allow Enter key to decode VIN
+        document.getElementById('vinInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                decodeVIN();
+            }
+        });
+
+        // Convert VIN to uppercase as user types
+        document.getElementById('vinInput').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        async function decodeVIN() {
+            const vinInput = document.getElementById('vinInput');
+            const vin = vinInput.value.trim();
+            const resultDiv = document.getElementById('vinResult');
+            const decodeBtn = document.getElementById('decodeBtn');
+
+            // Validate VIN
+            if (!vin) {
+                resultDiv.innerHTML = '<div class="error-message">⚠️ Please enter a VIN number</div>';
+                return;
+            }
+
+            if (vin.length !== 17) {
+                resultDiv.innerHTML = '<div class="error-message">⚠️ VIN must be exactly 17 characters</div>';
+                return;
+            }
+
+            // Disable button and show loading
+            decodeBtn.disabled = true;
+            resultDiv.innerHTML = '<div class="loading-message">🔍 Decoding VIN...</div>';
+
+            try {
+                const response = await fetch('/api/decode-vin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ vin: vin })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    resultDiv.innerHTML = `<div class="error-message">❌ Error: ${data.error}</div>`;
+                } else {
+                    displayVehicleInfo(data);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = '<div class="error-message">❌ Error connecting to the server. Please try again.</div>';
+            }
+
+            // Re-enable button
+            decodeBtn.disabled = false;
+        }
+
+        function displayVehicleInfo(data) {
+            const resultDiv = document.getElementById('vinResult');
+            
+            // Check if VIN is invalid (most fields are N/A or empty)
+            const year = data.ModelYear;
+            const make = data.Make;
+            const model = data.Model;
+            
+            const isInvalid = (!year || year === 'N/A' || year === '') && 
+                             (!make || make === 'N/A' || make === '') && 
+                             (!model || model === 'N/A' || model === '');
+            
+            console.log('Validation check:', { year, make, model, isInvalid }); // Debug log
+            
+            if (isInvalid) {
+                resultDiv.innerHTML = `
+                    <div class="error-message">
+                        ⚠️ Invalid VIN or vehicle not found. Please check the VIN and try again.
+                        <br><br>
+                        <strong>Tips:</strong>
+                        <ul style="text-align: left; margin-top: 1rem; padding-left: 2rem;">
+                            <li>VIN must be exactly 17 characters</li>
+                            <li>Check for typing errors (O vs 0, I vs 1)</li>
+                            <li>VINs don't contain the letters I, O, or Q</li>
+                            <li>Try a different VIN if this one is correct</li>
+                        </ul>
+                    </div>
+                `;
+                return;
+            }
+            
+            const html = `
+                <div class="vehicle-info-card">
+                    <h3>🚗 Vehicle Information</h3>
+                    
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">VIN:</span>
+                            <span class="info-value">${data.VIN}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Year:</span>
+                            <span class="info-value">${data.ModelYear || 'N/A'}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Make:</span>
+                            <span class="info-value">${data.Make || 'N/A'}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Model:</span>
+                            <span class="info-value">${data.Model || 'N/A'}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Body Type:</span>
+                            <span class="info-value">${data.BodyClass || 'N/A'}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Engine:</span>
+                            <span class="info-value">${data.EngineModel || 'N/A'}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Manufacturer:</span>
+                            <span class="info-value">${data.Manufacturer || 'N/A'}</span>
+                        </div>
+                        
+                        <div class="info-item">
+                            <span class="info-label">Vehicle Type:</span>
+                            <span class="info-value">${data.VehicleType || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

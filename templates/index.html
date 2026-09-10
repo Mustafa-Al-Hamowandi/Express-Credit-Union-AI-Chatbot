@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Credit Union - AI Training Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="{{ url_for('static', filename='CompanyPic.PNG') }}" alt="Express Credit Union Logo" class="company-logo">
+            </div>
+            <nav>
+                <a href="/" class="active">Chat</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/vin-decoder">VIN Decoder</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="preset-questions">
+                <h2>Quick Questions</h2>
+                <p class="helper-text">Click a question below or type your own</p>
+                <div class="question-buttons">
+                    {% for question in preset_questions %}
+                    <button class="preset-btn" onclick="selectPresetQuestion('{{ question.text }}')">
+                        {{ question.text }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="chat-section">
+                <div class="privacy-notice">
+                    <strong>🔒 Privacy Notice:</strong> This is a training tool for educational purposes. Please do not enter any personal information such as SSN, email addresses, phone numbers, or credit card numbers.
+                </div>
+                <div class="chat-container" id="chatContainer">
+                    <div class="welcome-message">
+                        <h3>Welcome to Express Credit Union AI Training!</h3>
+                        <p>I'm here to help you learn about our company. You can:</p>
+                        <ul>
+                            <li>Click one of the quick questions above</li>
+                            <li>Type your own question in the chat box below</li>
+                            <li>Ask follow-up questions for more details</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <textarea 
+                        id="userInput" 
+                        placeholder="Type your question here..."
+                        rows="3"
+                    ></textarea>
+                    <button id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Express Credit Union - Seattle, WA | Serving all community members</p>
+        </footer>
+    </div>
+
+    <script>
+        // Check if we're viewing a specific conversation from analytics
+        window.addEventListener('load', function() {
+            const savedConversation = sessionStorage.getItem('viewConversation');
+            if (savedConversation) {
+                const conv = JSON.parse(savedConversation);
+                
+                // Display the saved conversation
+                addMessageToChat('user', conv.question);
+                const assistantMsgId = addMessageToChat('assistant', conv.response);
+                
+                // Convert URLs to links in the assistant response
+                const assistantContent = document.querySelector(`#${assistantMsgId} .message-content`);
+                if (assistantContent) {
+                    convertUrlsToLinks(assistantContent);
+                }
+                
+                // Clear the saved conversation
+                sessionStorage.removeItem('viewConversation');
+            }
+        });
+
+        // Allow Enter key to send message (Shift+Enter for new line)
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function selectPresetQuestion(question) {
+            document.getElementById('userInput').value = question;
+            sendMessage();
+        }
+
+        // Function to detect personal information
+        function containsPersonalInfo(text) {
+            const patterns = {
+                ssn: /\b\d{3}[-.\s]?\d{2}[-.\s]?\d{4}\b/g,
+                email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+                phone: /\b(\+\d{1,2}\s?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
+                creditCard: /\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b/g
+            };
+            
+            const detected = [];
+            
+            if (patterns.ssn.test(text)) {
+                detected.push('Social Security Number');
+            }
+            if (patterns.email.test(text)) {
+                detected.push('email address');
+            }
+            if (patterns.phone.test(text)) {
+                detected.push('phone number');
+            }
+            if (patterns.creditCard.test(text)) {
+                detected.push('credit card number');
+            }
+            
+            return detected;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            console.log('=== START sendMessage() ===');
+            console.log('User message:', message);
+            
+            // Check for personal information
+            const personalInfoDetected = containsPersonalInfo(message);
+            
+            if (personalInfoDetected.length > 0) {
+                const infoTypes = personalInfoDetected.join(', ');
+                const warningMessage = `⚠️ Warning: Please do not enter personal information such as ${infoTypes}. This training tool is designed to answer general questions about Express Credit Union services. Your message was not sent to protect your privacy.`;
+                
+                addMessageToChat('error', warningMessage);
+                
+                // Clear input but don't disable it
+                input.value = '';
+                input.focus();
+                return;
+            }
+            
+            // Disable input while processing
+            input.disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            
+            // Display user message
+            const userMsgId = addMessageToChat('user', message);
+            console.log('User message added with ID:', userMsgId);
+            
+            // Clear input
+            input.value = '';
+            
+            // Create assistant message with unique ID
+            const assistantMessageId = addMessageToChat('assistant', '');
+            console.log('Assistant message created with ID:', assistantMessageId);
+            
+            // Get the content div using the returned ID
+            const assistantMessageDiv = document.getElementById(assistantMessageId);
+            if (!assistantMessageDiv) {
+                console.error('ERROR: Could not find assistant message div with ID:', assistantMessageId);
+                input.disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                return;
+            }
+            
+            const contentDiv = assistantMessageDiv.querySelector('.message-content');
+            if (!contentDiv) {
+                console.error('ERROR: Could not find content div inside assistant message');
+                input.disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                return;
+            }
+            
+            console.log('Content div found:', contentDiv);
+            
+            // Add typing indicator
+            contentDiv.innerHTML = '<span class="typing-indicator">●●●</span>';
+            console.log('Typing indicator added');
+            
+            try {
+                console.log('Sending fetch request to /api/chat');
+                
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                console.log('Response received, status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
+                
+                console.log('Starting to read stream...');
+                
+                // Read the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let hasReceivedContent = false;
+                let fullResponse = '';
+                
+                while (true) {
+                    const { value, done } = await reader.read();
+                    
+                    if (done) {
+                        console.log('Stream reading complete (done=true)');
+                        break;
+                    }
+                    
+                    // Decode the chunk
+                    const chunk = decoder.decode(value, { stream: true });
+                    buffer += chunk;
+                    
+                    // Process complete lines
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.slice(6).trim();
+                                if (!jsonStr) continue;
+                                
+                                const data = JSON.parse(jsonStr);
+                                
+                                if (data.error) {
+                                    console.error('Stream error:', data.error);
+                                    contentDiv.textContent = 'Error: ' + data.error;
+                                    assistantMessageDiv.className = 'message error';
+                                    hasReceivedContent = true;
+                                    break;
+                                }
+                                
+                                if (data.content) {
+                                    // Clear typing indicator on first content
+                                    if (!hasReceivedContent) {
+                                        console.log('First content chunk received, clearing typing indicator');
+                                        contentDiv.textContent = '';
+                                        hasReceivedContent = true;
+                                    }
+                                    
+                                    // Append content
+                                    fullResponse += data.content;
+                                    contentDiv.textContent = fullResponse;
+                                    
+                                    console.log('Content appended, length:', fullResponse.length);
+                                    
+                                    // Auto-scroll
+                                    const chatContainer = document.getElementById('chatContainer');
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                                
+                                if (data.done) {
+                                    console.log('Stream marked as done');
+                                    break;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing SSE:', e);
+                            }
+                        }
+                    }
+                }
+                
+                console.log('Final response length:', fullResponse.length);
+                console.log('Has received content:', hasReceivedContent);
+                
+                // Handle completion
+                if (hasReceivedContent && contentDiv.textContent.trim()) {
+                    console.log('Converting URLs to links...');
+                    convertUrlsToLinks(contentDiv);
+                    console.log('SUCCESS: Stream completed with content');
+                } else {
+                    console.error('ERROR: No content received from stream');
+                    contentDiv.textContent = 'Error: No response received from server. Please try again.';
+                    assistantMessageDiv.className = 'message error';
+                }
+                
+            } catch (error) {
+                console.error('ERROR in sendMessage:', error);
+                contentDiv.textContent = 'Error connecting to the server. Please try again.';
+                assistantMessageDiv.className = 'message error';
+            }
+            
+            // Re-enable input
+            input.disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            input.focus();
+            
+            console.log('=== END sendMessage() ===\n');
+        }
+
+        function addMessageToChat(sender, message) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            messageDiv.id = messageId;
+            messageDiv.className = 'message ' + sender;
+            
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = sender === 'user' ? 'You' : (sender === 'error' ? 'Error' : 'AI Assistant');
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = message;
+            
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(content);
+            chatContainer.appendChild(messageDiv);
+            
+            console.log('Message added:', sender, 'ID:', messageId);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return messageId;
+        }
+
+        // Function to convert URLs in text to clickable links
+        function convertUrlsToLinks(element) {
+            // Check if already converted
+            if (element.querySelector('a')) {
+                console.log('URLs already converted, skipping');
+                return;
+            }
+            
+            const urlPattern = /(https?:\/\/[^\s<>"]+)/g;
+            const text = element.textContent;
+            
+            if (urlPattern.test(text)) {
+                const html = text.replace(urlPattern, function(url) {
+                    let cleanUrl = url.replace(/[.,;:!?)]+$/, '');
+                    return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`;
+                });
+                element.innerHTML = html;
+                console.log('URLs converted to links');
+            }
+        }
+    </script>
+</body>
+</html>
