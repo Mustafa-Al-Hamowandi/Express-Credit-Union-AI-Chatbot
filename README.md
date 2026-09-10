@@ -1,12 +1,28 @@
 # Express Credit Union AI Training Application
 
-An AI-powered training application for Express Credit Union staff members in Seattle. This application helps entry-level employees learn about the company's services, policies, and procedures through an interactive chat interface.
+An AI-powered training application for Express Credit Union staff members in Seattle. This application helps entry-level employees learn about the company's services, policies, and procedures through an interactive chat interface. This is a portfolio piece that is not an active or published tool. It was built as a class project in collaboration with Express Credit Union. AI was used throughout development to help guide implementation decisions and debug issues, in line with the course's AI usage policy. Awarded 1st place, AI & Information Systems Competition, Fall 2025.
 
 **Author:** Mustafa Al Hamowandi  
 **Course Project:** Python Web Application Development  
 **Client:** Express Credit Union, Seattle
 
 ---
+
+## Screenshots
+
+## Main Page
+<img width="1363" height="606" alt="MainPage" src="https://github.com/user-attachments/assets/0233c6ce-44a6-4985-8373-7248feb25b99" />
+## AI Chatbot
+<img width="1201" height="597" alt="AIChatbot" src="https://github.com/user-attachments/assets/d388622b-4864-4713-a480-7d77a733918b" />
+## Analytics 1
+<img width="1247" height="598" alt="Analytics" src="https://github.com/user-attachments/assets/0720566d-baa2-4111-9bb4-f2ae21408399" />
+## Analytics 2
+<img width="811" height="598" alt="Analytics2" src="https://github.com/user-attachments/assets/cd4fe894-9418-4678-ae0d-fd742618c5a8" />
+## Analytics 3
+<img width="901" height="603" alt="Analytics3" src="https://github.com/user-attachments/assets/99bdb0fe-abf2-46fa-bb1f-943e1be8dce5" />
+## VIN Decoder
+<img width="1222" height="599" alt="VINDecoder" src="https://github.com/user-attachments/assets/e247e9c8-6ac1-4008-a658-69a5cfce512b" />
+
 
 ## Features
 
